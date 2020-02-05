@@ -22,6 +22,7 @@
         private readonly HttpDocumentRetriever documentRetriever;
         private readonly string _issuer;
         private readonly string _audience;
+        private List<SecurityKey> _keys = new List<SecurityKey>();
 
 
         public AccessTokenProvider(string audience, string issuer)
@@ -34,17 +35,26 @@
 
         public async Task<List<SecurityKey>> GetKeys()
         {
-            var configurationManager = new ConfigurationManager<OpenIdConnectConfiguration>(
+            if (this._keys.Count > 0) {
+                return this._keys;
+            }
+            else 
+            {
+                var configurationManager = new ConfigurationManager<OpenIdConnectConfiguration>(
                 $"{this._issuer}.well-known/openid-configuration",
                 new OpenIdConnectConfigurationRetriever(),
                 this.documentRetriever
                 );
 
-            var openIdConfig = await configurationManager.GetConfigurationAsync(CancellationToken.None);
+                var openIdConfig = await configurationManager.GetConfigurationAsync(CancellationToken.None);
 
-            var signingKeys = openIdConfig.SigningKeys.ToList();
+                var signingKeys = openIdConfig.SigningKeys.ToList();
 
-            return signingKeys;
+                this._keys = signingKeys;
+
+                return signingKeys;
+            }
+            
         }
 
         public async Task<AccessTokenResult> ValidateToken(HttpRequest request)
